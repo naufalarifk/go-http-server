@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"httpfromtcp/internal/headers"
 	"io"
+	"strconv"
 )
 
 type parserState string
@@ -12,6 +13,7 @@ type parserState string
 const (
 	StateInit    parserState = "init"
 	StateHeaders parserState = "headers"
+	StateBody    parserState = "body"
 	StateDone    parserState = "done"
 	StateError   parserState = "error"
 )
@@ -26,12 +28,26 @@ type Request struct {
 	RequestLine RequestLine
 	Headers     *headers.Headers
 	state       parserState
+	Body        string
+}
+
+func getInt(headers *headers.Headers, name string, defaultValue int) int {
+	valueStr, exists := headers.Get(name)
+	if !exists {
+		return defaultValue
+	}
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }
 
 func newRequest() *Request {
 	return &Request{
 		state:   StateInit,
 		Headers: headers.NewHeaders(),
+		Body:    "",
 	}
 }
 
@@ -102,7 +118,28 @@ outer:
 			read += n
 
 			if done {
+				r.state = StateBody
+			}
+
+		case StateBody:
+			contentLength := getInt(r.Headers, "content-length", 0)
+			if contentLength == 0 {
 				r.state = StateDone
+				break outer
+			}
+
+			if len(currentData) == 0 {
+				break outer
+			}
+
+			remaining := min(contentLength-len(r.Body), len(currentData))
+			r.Body += string(currentData[:remaining])
+			read += remaining
+
+			if len(r.Body) == contentLength {
+				r.state = StateDone
+			} else {
+				break outer
 			}
 
 		case StateDone:
@@ -133,6 +170,12 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	for !request.done() && !request.error() {
 		n, err := reader.Read(buf[bufLen:])
 		if err != nil {
+			if err == io.EOF && request.state == StateBody {
+				contentLength := getInt(request.Headers, "content-length", 0)
+				if len(request.Body) < contentLength {
+					return nil, fmt.Errorf("Unexpected EOF: expected %d bytes in body, got %d", contentLength, len(request.Body))
+				}
+			}
 			return nil, err
 		}
 		bufLen += n

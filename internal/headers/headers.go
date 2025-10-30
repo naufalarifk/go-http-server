@@ -49,8 +49,9 @@ func NewHeaders() *Headers {
 		headers: map[string]string{}}
 }
 
-func (h *Headers) Get(name string) string {
-	return h.headers[strings.ToLower(name)]
+func (h *Headers) Get(name string) (string, bool) {
+	str, ok := h.headers[strings.ToLower(name)]
+	return str, ok
 }
 
 func (h *Headers) Set(name, value string) {
@@ -80,9 +81,9 @@ func (h *Headers) Parse(data []byte) (int, bool, error) {
 		}
 
 		if idx == 0 {
-			// Found empty line - end of headers
+
 			done = true
-			read += len(rn) // Account for the \r\n of the empty line
+			read += len(rn)
 			break
 		}
 
