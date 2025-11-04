@@ -30,6 +30,8 @@ func main() {
 		r.Headers.Foreach(func(n, v string) {
 			fmt.Printf("- %s: %s\n", n, v)
 		})
+		fmt.Printf("Body: \n")
+		fmt.Printf("%s\n", r.Body)
 	}
 
 }

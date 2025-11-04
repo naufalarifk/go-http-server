@@ -85,7 +85,7 @@ func parseRequestLine(b []byte) (*RequestLine, int, error) {
 
 func (r *Request) parse(data []byte) (int, error) {
 	read := 0
-outer:
+dance:
 	for {
 		currentData := data[read:]
 		switch r.state {
@@ -98,7 +98,7 @@ outer:
 				return 0, err
 			}
 			if n == 0 {
-				break outer
+				break dance
 			}
 			r.RequestLine = *rl
 			read += n
@@ -112,7 +112,7 @@ outer:
 			}
 
 			if n == 0 {
-				break outer
+				break dance
 			}
 
 			read += n
@@ -125,11 +125,11 @@ outer:
 			contentLength := getInt(r.Headers, "content-length", 0)
 			if contentLength == 0 {
 				r.state = StateDone
-				break outer
+				break dance
 			}
 
 			if len(currentData) == 0 {
-				break outer
+				break dance
 			}
 
 			remaining := min(contentLength-len(r.Body), len(currentData))
@@ -139,11 +139,11 @@ outer:
 			if len(r.Body) == contentLength {
 				r.state = StateDone
 			} else {
-				break outer
+				break dance
 			}
 
 		case StateDone:
-			break outer
+			break dance
 
 		default:
 			panic("this code sucks")
