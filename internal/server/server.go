@@ -16,8 +16,9 @@ type HandlerError struct {
 type Handler func(w *response.Writer, req *request.Request)
 
 type Server struct {
-	closed  bool
-	handler Handler
+	closed   bool
+	handler  Handler
+	listener net.Listener
 }
 
 func runConnection(s *Server, conn io.ReadWriteCloser) {
@@ -35,19 +36,16 @@ func runConnection(s *Server, conn io.ReadWriteCloser) {
 }
 
 func runServer(s *Server, listener net.Listener) error {
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if s.closed {
-				return
-			}
-			if err != nil {
-				return
-			}
-			go runConnection(s, conn)
+	for {
+		conn, err := listener.Accept()
+		if s.closed {
+			return nil
 		}
-	}()
-	return nil
+		if err != nil {
+			return err
+		}
+		go runConnection(s, conn)
+	}
 }
 
 func Serve(port string, handler Handler) (*Server, error) {
@@ -56,8 +54,9 @@ func Serve(port string, handler Handler) (*Server, error) {
 		return nil, err
 	}
 	server := &Server{
-		closed:  false,
-		handler: handler,
+		closed:   false,
+		handler:  handler,
+		listener: listener,
 	}
 	go runServer(server, listener)
 	return server, nil
@@ -65,5 +64,8 @@ func Serve(port string, handler Handler) (*Server, error) {
 
 func (s *Server) Close() error {
 	s.closed = true
+	if s.listener != nil {
+		return s.listener.Close()
+	}
 	return nil
 }

@@ -30,11 +30,11 @@ func respond500() []byte {
 	return []byte(`
 	<html>
 			<head>
-			<title>400 Bad Request</title>
+			<title>500 Internal Server Error</title>
 			</head>
 			<body>
-			<h1>Bad Request</h1>
-			<p>Your Request Kinda Sucks</p>
+			<h1>Internal Server Error</h1>
+			<p>My Bad Gang</p>
 			</body>
 			</html>`)
 }
@@ -59,11 +59,9 @@ func main() {
 		status := response.StatusOK
 
 		if req.RequestLine.RequestTarget == "/yourproblem" {
-			w.WriteStatusLine(response.StatusBadRequest)
 			body = respond400()
 			status = response.StatusBadRequest
 		} else if req.RequestLine.RequestTarget == "/myproblem" {
-			w.WriteStatusLine(response.StatusBadRequest)
 			body = respond500()
 			status = response.StatusInternalServerError
 		}

@@ -49,11 +49,11 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	return err
 }
 func (w *Writer) WriteHeaders(h headers.Headers) error {
-	b := []byte{}
+	var b []byte
 	h.Foreach(func(n, v string) {
-		b = fmt.Appendf(b, "%s: %s\r\n", n, v)
+		b = append(b, fmt.Appendf(nil, "%s: %s\r\n", n, v)...)
 	})
-	b = fmt.Append(b, "\r\n")
+	b = append(b, []byte("\r\n")...)
 	_, err := w.writer.Write(b)
 	return err
 }
