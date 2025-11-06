@@ -69,7 +69,7 @@ func main() {
 			// added request to httpbin for chunked encoding
 		} else if strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/stream") {
 			target := req.RequestLine.RequestTarget
-			res, err := http.Get("https://httpbin.org" + target[len("/httpbin/"):])
+			res, err := http.Get("https://httpbin.org" + target[len("/httpbin"):])
 			fmt.Println(res)
 			if err != nil {
 				body = respond500()
