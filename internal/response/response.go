@@ -6,6 +6,9 @@ import (
 	"io"
 )
 
+type Response struct {
+}
+
 type StatusCode int
 
 const (
@@ -22,28 +25,40 @@ func GetDefaultHeaders(contentLen int) *headers.Headers {
 	return h
 }
 
-func WriteHeaders(w io.Writer, h *headers.Headers) error {
+type Writer struct {
+	writer io.Writer
+}
+
+func NewWriter(writer io.Writer) *Writer {
+	return &Writer{writer: writer}
+}
+
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
+	statusLine := []byte{}
+	switch statusCode {
+	case StatusOK:
+		statusLine = []byte("HTTP/1.1 200 OK\r\n")
+	case StatusBadRequest:
+		statusLine = []byte("HTTP/1.1 400 Bad Request\r\n")
+	case StatusInternalServerError:
+		statusLine = []byte("HTTP/1.1 500 Internal Server Error\r\n")
+	default:
+		return fmt.Errorf("Unrecognized Error Code")
+	}
+	_, err := w.writer.Write(statusLine)
+	return err
+}
+func (w *Writer) WriteHeaders(h headers.Headers) error {
 	b := []byte{}
 	h.Foreach(func(n, v string) {
 		b = fmt.Appendf(b, "%s: %s\r\n", n, v)
 	})
 	b = fmt.Append(b, "\r\n")
-	_, err := w.Write(b)
+	_, err := w.writer.Write(b)
 	return err
 }
+func (w *Writer) WriteBody(p []byte) (int, error) {
+	n, err := w.writer.Write(p)
 
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
-	statusLine := []byte{}
-	switch statusCode {
-	case StatusOK:
-		statusLine = []byte("HTTP/1.1 200 OK")
-	case StatusBadRequest:
-		statusLine = []byte("HTTP/1.1 400 OK")
-	case StatusInternalServerError:
-		statusLine = []byte("HTTP/1.1 500 OK")
-	default:
-		return fmt.Errorf("Unrecognized Error Code")
-	}
-	_, err := w.Write(statusLine)
-	return err
+	return n, err
 }

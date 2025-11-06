@@ -2,20 +2,36 @@ package server
 
 import (
 	"fmt"
+	"httpfromtcp/internal/request"
+	"httpfromtcp/internal/response"
 	"io"
 	"net"
 )
 
+type HandlerError struct {
+	StatusCode response.StatusCode
+	Message    string
+}
+
+type Handler func(w *response.Writer, req *request.Request)
+
 type Server struct {
-	closed bool
+	closed  bool
+	handler Handler
 }
 
 func runConnection(s *Server, conn io.ReadWriteCloser) {
+	defer conn.Close()
 
-	out := []byte("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nHello World!")
+	responseWriter := response.NewWriter(conn)
+	r, err := request.RequestFromReader(conn)
+	if err != nil {
+		responseWriter.WriteStatusLine(response.StatusBadRequest)
+		responseWriter.WriteHeaders(*response.GetDefaultHeaders(0))
+		return
+	}
 
-	conn.Write(out)
-	conn.Close()
+	s.handler(responseWriter, r)
 }
 
 func runServer(s *Server, listener net.Listener) error {
@@ -34,12 +50,15 @@ func runServer(s *Server, listener net.Listener) error {
 	return nil
 }
 
-func Serve(port string) (*Server, error) {
+func Serve(port string, handler Handler) (*Server, error) {
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s", port))
 	if err != nil {
 		return nil, err
 	}
-	server := &Server{closed: false}
+	server := &Server{
+		closed:  false,
+		handler: handler,
+	}
 	go runServer(server, listener)
 	return server, nil
 }

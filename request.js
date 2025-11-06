@@ -17,10 +17,9 @@ function makeRequest(path = "/coffee", body) {
     },
     body: JSON.stringify(body),
   });
-  console.log("data", data);
   return data;
 }
 
-makeRequest("/coffee", body).then((response) => {
+makeRequest("/", body).then((response) => {
   console.log("response", response);
 });
